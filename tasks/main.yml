@@ -1,0 +1,45 @@
+---
+- name: Install influxdb
+  apt:
+    package: influxdb
+    state: present
+
+- name: Install influxdb client
+  apt:
+    package: influxdb-client
+    state: present
+
+- name: setup collectdb types database
+  copy:
+    src: collectd-types.db
+    dest: /etc/influxdb/collectd-types.db
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart influxdb
+  when: influxdb_collectd == true
+
+- name: Configure influxdb
+  template:
+    src: influxdb.conf.j2
+    dest: /etc/influxdb/influxdb.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart influxdb
+
+- name: create database
+  influxdb_database:
+    hostname: "localhost"
+    database_name: "{{ influxdb_database_name }}"
+    state: present
+  when: influxdb_database_name is defined
+
+- name: create retention policy
+  influxdb_retention_policy:
+    hostname: "localhost"
+    database_name: "{{ influxdb_database_name }}"
+    policy_name: default
+    duration: "{{ influxdb_retention_policy }}"
+    replication: 1
+  when: influxdb_database_name is defined and influxdb_retention_policy is defined
